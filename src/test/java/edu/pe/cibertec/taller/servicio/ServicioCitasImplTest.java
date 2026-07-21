@@ -17,8 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import javax.swing.text.html.Option;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -86,7 +84,7 @@ class ServicioCitasImplTest {
 	}
 
 	@Test
-	@DisplayName("Agendar una cita valida al guardar, notifica y la retorna en estado PROGRAMADA")
+	@DisplayName("P01:Agendar una cita valida al guardar, notifica y la retorna en estado PROGRAMADA")
 	void agendarCitaExitosa() {
 		// Arrange
 		// TODO
@@ -112,7 +110,7 @@ class ServicioCitasImplTest {
 	}
 
 	@Test
-	@DisplayName("Agendar con un mecanico inexistente lanza MecanicoNoEncontradoException")
+	@DisplayName("P01:Agendar con un mecanico inexistente lanza MecanicoNoEncontradoException")
 	void agendarConMecanicoInexistente() {
 		// Arrange
 		// TODO
@@ -124,18 +122,18 @@ class ServicioCitasImplTest {
 
 		// Act y Assert
 		// TODO
-		MecanicoNoEncontradoException execpion = assertThrows(
+		MecanicoNoEncontradoException excepcion = assertThrows(
 				MecanicoNoEncontradoException.class,
 				() -> servicioCitas.agendarCita(
-						idInexistente,nombreMecanico,TipoServicio.CAMBIO_ACEITE,fechaCita
+						idInexistente,placa,TipoServicio.CAMBIO_ACEITE,fechaCita
 				));
 
-		assertTrue(execpion.getMessage().contains("99"));
+		assertTrue(excepcion.getMessage().contains("99"));
 		verify(repositorioCitas,never()).save(any(Cita.class));
 	}
 
 	@Test
-	@DisplayName("Agendar cuando la especialidad no coincide lanza EspecialidadIncorrectaException")
+	@DisplayName("P01:Agendar cuando la especialidad no coincide lanza EspecialidadIncorrectaException")
 	void agendarConEspecialidadIncorrecta() {
 		// Arrange
 		// TODO
@@ -157,16 +155,13 @@ class ServicioCitasImplTest {
 
 
 	@Test
-	@DisplayName("Una reparacion de motor a las 07:00 se rechaza")
+	@DisplayName("P02:Una reparacion de motor a las 07:00 se rechaza")
 	void agendarServicioPesadoALasSiete() {
 		// Arrange
 
 		LocalDateTime fechaInicio = LocalDateTime.of(
 				2026, 9, 19, 7, 0
 		);
-
-		when(proveedorFechaHora.ahora())
-				.thenReturn(ahora);
 
 		when(repositorioMecanicos.findById(2L))
 				.thenReturn(Optional.of(mecanicoReparacionMotor));
@@ -188,7 +183,7 @@ class ServicioCitasImplTest {
 	}
 
 	@Test
-	@DisplayName("Una reparacion de motor a las 08:00 se acepta y se guarda")
+	@DisplayName("P02:Una reparacion de motor a las 08:00 se acepta y se guarda")
 	void agendarServicioPesadoEnLaManana() {
 		// Arrange
 
@@ -228,7 +223,7 @@ class ServicioCitasImplTest {
 	}
 
 	@Test
-	@DisplayName("Una reparacion de motor a las 11:00 se acepta y se guarda")
+	@DisplayName("P02:Una reparacion de motor a las 11:00 se acepta y se guarda")
 	void agendarServicioPesadoALasOnce() {
 		// Arrange
 
@@ -268,19 +263,17 @@ class ServicioCitasImplTest {
 		verify(servicioNotificaciones).notificarCitaAgendada(cita);
 	}
 	@Test
-	@DisplayName("Una reparacion de motor a las 12:00 se rechaza")
+	@DisplayName("P02:Una reparacion de motor a las 12:00 se rechaza")
 	void agendarServicioPesadoEnLaTarde() {
 		// Arrange
+
+
 		LocalDateTime fechaInicio = LocalDateTime.of(
 				2026, 9, 19, 12, 0
 		);
 
-		when(proveedorFechaHora.ahora())
-				.thenReturn(ahora);
-
 		when(repositorioMecanicos.findById(2L))
 				.thenReturn(Optional.of(mecanicoReparacionMotor));
-
 		// Act
 		HorarioNoPermitidoException excepcion = assertThrows(
 				HorarioNoPermitidoException.class,
@@ -296,7 +289,8 @@ class ServicioCitasImplTest {
 		assertTrue(excepcion.getMessage().contains("12:00"));
 		verify(repositorioCitas, never()).save(any(Cita.class));
 	}
-	@Test
+
+
 	@DisplayName("Agendar en una fecha del pasado lanza FechaInvalidaException")
 	void agendarConFechaEnElPasado() {
 		// Arrange
@@ -306,7 +300,7 @@ class ServicioCitasImplTest {
 		// TODO
 	}
 
-	@Test
+
 	@DisplayName("Agendar sobre una cita ya programada se rechaza con HorarioOcupadoException")
 	void agendarConSuperposicion() {
 		// Arrange
@@ -316,7 +310,7 @@ class ServicioCitasImplTest {
 		// TODO
 	}
 
-	@Test
+
 	@DisplayName("Una cita que empieza justo cuando termina otra se acepta")
 	void agendarCitaContigua() {
 		// Arrange
@@ -420,7 +414,7 @@ class ServicioCitasImplTest {
 				.notificarCitaCancelada(cita);
 	}
 
-	@Test
+
 	@DisplayName("Cancelar una cita inexistente lanza CitaNoEncontradaException")
 	void cancelarCitaInexistente() {
 		// Arrange
@@ -431,8 +425,8 @@ class ServicioCitasImplTest {
 	}
 
 	@Test
-	@DisplayName("Cancelar una cita que ya fue cancelada lanza CitaNoCancelableException")
-	void cancelarCitaYaCancelada() {
+	@DisplayName("Cancelar una cita que ya fue atendida lanza CitaNoCancelableException")
+	void cancelarCitaYaAtendida() {
 		// Arrange
 		long idCita = 12L;
 
@@ -467,7 +461,7 @@ class ServicioCitasImplTest {
 	}
 
 
-	@Test
+
 	@DisplayName("Buscar mecanico disponible retorna el primero sin citas superpuestas")
 	void buscarMecanicoDisponibleRetornaPrimeroLibre() {
 		// Arrange
@@ -480,7 +474,7 @@ class ServicioCitasImplTest {
 		// TODO
 	}
 
-	@Test
+
 	@DisplayName("Buscar mecanico cuando ninguno esta libre lanza SinDisponibilidadException")
 	void buscarMecanicoSinDisponibilidad() {
 		// Arrange
