@@ -1,12 +1,10 @@
 package edu.pe.cibertec.taller.servicio;
 
+import edu.pe.cibertec.taller.excepcion.CitaNoCancelableException;
 import edu.pe.cibertec.taller.excepcion.EspecialidadIncorrectaException;
 import edu.pe.cibertec.taller.excepcion.HorarioNoPermitidoException;
 import edu.pe.cibertec.taller.excepcion.MecanicoNoEncontradoException;
-import edu.pe.cibertec.taller.modelo.Cita;
-import edu.pe.cibertec.taller.modelo.EstadoCita;
-import edu.pe.cibertec.taller.modelo.Mecanico;
-import edu.pe.cibertec.taller.modelo.TipoServicio;
+import edu.pe.cibertec.taller.modelo.*;
 import edu.pe.cibertec.taller.repositorio.RepositorioCitas;
 import edu.pe.cibertec.taller.repositorio.RepositorioMecanicos;
 import edu.pe.cibertec.taller.servicio.impl.ServicioCitasImpl;
@@ -334,27 +332,92 @@ class ServicioCitasImplTest {
 	@Test
 	@DisplayName("Cancelar con 24 horas o mas de anticipacion no genera penalidad")
 	void cancelarConAnticipacionSuficiente() {
+
 		// Arrange
 		// TODO
 
+		long idCita = 10L;
+
+		LocalDateTime horaCancelacion = LocalDateTime.of(
+				2026, 9, 18, 10, 0
+		);
+
+		Cita cita = new Cita(
+				idCita,
+				mecanicoCambioAceite,
+				placa,
+				TipoServicio.CAMBIO_ACEITE,
+				fechaCita,
+				1,
+				EstadoCita.PROGRAMADA
+		);
+
+		when(proveedorFechaHora.ahora())
+				.thenReturn(horaCancelacion);
+
+		when(repositorioCitas.findById(idCita))
+				.thenReturn(Optional.of(cita));
+
+		when(repositorioCitas.save(cita))
+				.thenReturn(cita);
+
 		// Act
 		// TODO
+		ResultadoCancelacion resultado =
+				servicioCitas.cancelarCita(idCita);
 
 		// Assert
 		// TODO: penalidad 0, estado CANCELADA, notificacion
+		assertEquals(0.0, resultado.getMontoPenalidad());
+		assertEquals(EstadoCita.CANCELADA, cita.getEstado());
+		assertTrue(resultado.isExitoso());
+		assertEquals(nombreMecanico, cita.getMecanico().getNombre());
+
+		verify(repositorioCitas).save(cita);
+		verify(servicioNotificaciones)
+				.notificarCitaCancelada(cita);
 	}
 
 	@Test
-	@DisplayName("Cancelar con menos de 24 horas aplica una penalidad de 50.00")
+	@DisplayName("Cancelar faltando 2 horas aplica una penalidad de 50.00")
 	void cancelarConAvisoTardio() {
 		// Arrange
-		// TODO
+		long idCita = 11L;
+
+		LocalDateTime horaCancelacion = LocalDateTime.of(
+				2026, 9, 19, 8, 0
+		);
+
+		Cita cita = new Cita(
+				idCita,
+				mecanicoCambioAceite,
+				placa,
+				TipoServicio.CAMBIO_ACEITE,
+				fechaCita,
+				1,
+				EstadoCita.PROGRAMADA
+		);
+
+		when(proveedorFechaHora.ahora())
+				.thenReturn(horaCancelacion);
+
+		when(repositorioCitas.findById(idCita))
+				.thenReturn(Optional.of(cita));
+
+		when(repositorioCitas.save(cita))
+				.thenReturn(cita);
 
 		// Act
-		// TODO
+		ResultadoCancelacion resultado =
+				servicioCitas.cancelarCita(idCita);
 
 		// Assert
-		// TODO
+		assertEquals(50.0, resultado.getMontoPenalidad());
+		assertEquals(EstadoCita.CANCELADA, cita.getEstado());
+
+		verify(repositorioCitas).save(cita);
+		verify(servicioNotificaciones)
+				.notificarCitaCancelada(cita);
 	}
 
 	@Test
@@ -371,11 +434,38 @@ class ServicioCitasImplTest {
 	@DisplayName("Cancelar una cita que ya fue cancelada lanza CitaNoCancelableException")
 	void cancelarCitaYaCancelada() {
 		// Arrange
-		// TODO
+		long idCita = 12L;
 
-		// Act y Assert
-		// TODO
+		Cita cita = new Cita(
+				idCita,
+				mecanicoCambioAceite,
+				placa,
+				TipoServicio.CAMBIO_ACEITE,
+				fechaCita,
+				1,
+				EstadoCita.ATENDIDA
+		);
+
+		when(repositorioCitas.findById(idCita))
+				.thenReturn(Optional.of(cita));
+
+		// Act
+		CitaNoCancelableException excepcion = assertThrows(
+				CitaNoCancelableException.class,
+				() -> servicioCitas.cancelarCita(idCita)
+		);
+
+		// Assert
+		assertTrue(excepcion.getMessage().contains("programadas"));
+		assertEquals(nombreMecanico, cita.getMecanico().getNombre());
+
+		verify(repositorioCitas, never())
+				.save(any(Cita.class));
+
+		verify(servicioNotificaciones, never())
+				.notificarCitaCancelada(any(Cita.class));
 	}
+
 
 	@Test
 	@DisplayName("Buscar mecanico disponible retorna el primero sin citas superpuestas")
