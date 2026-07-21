@@ -1,6 +1,7 @@
 package edu.pe.cibertec.taller.servicio;
 
 import edu.pe.cibertec.taller.excepcion.EspecialidadIncorrectaException;
+import edu.pe.cibertec.taller.excepcion.HorarioNoPermitidoException;
 import edu.pe.cibertec.taller.excepcion.MecanicoNoEncontradoException;
 import edu.pe.cibertec.taller.modelo.Cita;
 import edu.pe.cibertec.taller.modelo.EstadoCita;
@@ -155,29 +156,148 @@ class ServicioCitasImplTest {
 		assertTrue(exception.getMessage().contains("REPARACION_MOTOR"));
 	}
 
-	@Test
-	@DisplayName("Un servicio pesado a las 15:00 se rechaza con HorarioNoPermitidoException")
-	void agendarServicioPesadoEnLaTarde() {
-		// Arrange
-		// TODO
 
-		// Act y Assert
-		// TODO
-	}
 
 	@Test
-	@DisplayName("Un servicio pesado a las 09:00 se acepta y se guarda")
-	void agendarServicioPesadoEnLaManana() {
+	@DisplayName("Una reparacion de motor a las 07:00 se rechaza")
+	void agendarServicioPesadoALasSiete() {
 		// Arrange
-		// TODO
+
+		LocalDateTime fechaInicio = LocalDateTime.of(
+				2026, 9, 19, 7, 0
+		);
+
+		when(proveedorFechaHora.ahora())
+				.thenReturn(ahora);
+
+		when(repositorioMecanicos.findById(2L))
+				.thenReturn(Optional.of(mecanicoReparacionMotor));
 
 		// Act
-		// TODO
+		HorarioNoPermitidoException excepcion = assertThrows(
+				HorarioNoPermitidoException.class,
+				() -> servicioCitas.agendarCita(
+						2L,
+						placa,
+						TipoServicio.REPARACION_MOTOR,
+						fechaInicio
+				)
+		);
 
 		// Assert
-		// TODO
+		assertTrue(excepcion.getMessage().contains("08:00"));
+		verify(repositorioCitas, never()).save(any(Cita.class));
 	}
 
+	@Test
+	@DisplayName("Una reparacion de motor a las 08:00 se acepta y se guarda")
+	void agendarServicioPesadoEnLaManana() {
+		// Arrange
+
+		LocalDateTime fechaInicio = LocalDateTime.of(
+				2026, 9, 19, 8, 0
+		);
+
+		when(proveedorFechaHora.ahora())
+				.thenReturn(ahora);
+
+		when(repositorioMecanicos.findById(2L))
+				.thenReturn(Optional.of(mecanicoReparacionMotor));
+
+		when(repositorioCitas.findByMecanicoIdAndEstado(
+				2L,
+				EstadoCita.PROGRAMADA
+		)).thenReturn(Collections.emptyList());
+
+		when(repositorioCitas.save(any(Cita.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		// Act
+		Cita cita = servicioCitas.agendarCita(
+				2L,
+				placa,
+				TipoServicio.REPARACION_MOTOR,
+				fechaInicio
+		);
+
+		// Assert
+		assertEquals(EstadoCita.PROGRAMADA, cita.getEstado());
+		assertEquals(4, cita.getDuracionHoras());
+		assertEquals(fechaInicio, cita.getFechaHoraInicio());
+
+		verify(repositorioCitas).save(cita);
+		verify(servicioNotificaciones).notificarCitaAgendada(cita);
+	}
+
+	@Test
+	@DisplayName("Una reparacion de motor a las 11:00 se acepta y se guarda")
+	void agendarServicioPesadoALasOnce() {
+		// Arrange
+
+
+		LocalDateTime fechaInicio = LocalDateTime.of(
+				2026, 9, 19, 11, 0
+		);
+
+		when(proveedorFechaHora.ahora())
+				.thenReturn(ahora);
+
+		when(repositorioMecanicos.findById(2L))
+				.thenReturn(Optional.of(mecanicoReparacionMotor));
+
+		when(repositorioCitas.findByMecanicoIdAndEstado(
+				2L,
+				EstadoCita.PROGRAMADA
+		)).thenReturn(Collections.emptyList());
+
+		when(repositorioCitas.save(any(Cita.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		// Act
+		Cita cita = servicioCitas.agendarCita(
+				2L,
+				placa,
+				TipoServicio.REPARACION_MOTOR,
+				fechaInicio
+		);
+
+		// Assert
+		assertEquals(EstadoCita.PROGRAMADA, cita.getEstado());
+		assertEquals(4, cita.getDuracionHoras());
+		assertEquals(fechaInicio, cita.getFechaHoraInicio());
+
+		verify(repositorioCitas).save(cita);
+		verify(servicioNotificaciones).notificarCitaAgendada(cita);
+	}
+	@Test
+	@DisplayName("Una reparacion de motor a las 12:00 se rechaza")
+	void agendarServicioPesadoEnLaTarde() {
+		// Arrange
+		LocalDateTime fechaInicio = LocalDateTime.of(
+				2026, 9, 19, 12, 0
+		);
+
+		when(proveedorFechaHora.ahora())
+				.thenReturn(ahora);
+
+		when(repositorioMecanicos.findById(2L))
+				.thenReturn(Optional.of(mecanicoReparacionMotor));
+
+		// Act
+		HorarioNoPermitidoException excepcion = assertThrows(
+				HorarioNoPermitidoException.class,
+				() -> servicioCitas.agendarCita(
+						2L,
+						placa,
+						TipoServicio.REPARACION_MOTOR,
+						fechaInicio
+				)
+		);
+
+		// Assert
+		assertTrue(excepcion.getMessage().contains("12:00"));
+		verify(repositorioCitas, never()).save(any(Cita.class));
+	}
 	@Test
 	@DisplayName("Agendar en una fecha del pasado lanza FechaInvalidaException")
 	void agendarConFechaEnElPasado() {
