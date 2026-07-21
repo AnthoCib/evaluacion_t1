@@ -271,7 +271,6 @@ class ServicioCitasImplTest {
 		LocalDateTime fechaInicio = LocalDateTime.of(
 				2026, 9, 19, 12, 0
 		);
-
 		when(repositorioMecanicos.findById(2L))
 				.thenReturn(Optional.of(mecanicoReparacionMotor));
 		// Act
